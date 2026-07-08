@@ -1,7 +1,10 @@
--- MotoContable Web - Schema inicial
+-- MotoContable Web - Schema v2
 -- Ejecutar en el SQL Editor de Supabase
+-- (Si ya ejecutaste una versión anterior, borra las tablas antes: drop table if exists
+--  weekly_payments, trip_legs, extras, expenses, passengers, profiles cascade;
+--  Si SOLO te falta la columna days_of_week en una tabla ya creada, corre en su lugar:
+--  alter table passengers add column days_of_week smallint[] not null default '{1,2,3,4,5}';)
 
--- Extensión para UUIDs
 create extension if not exists "uuid-ossp";
 
 -- =========================================
@@ -16,50 +19,53 @@ create table profiles (
 );
 
 -- =========================================
--- RUTAS (rutas frecuentes que maneja el conductor)
--- =========================================
-create table routes (
-  id uuid primary key default uuid_generate_v4(),
-  driver_id uuid references profiles(id) on delete cascade not null,
-  name text not null,           -- ej: "Terminal - Mercado Central"
-  origin text,
-  destination text,
-  default_fare numeric(10,2),   -- tarifa habitual de esa ruta
-  created_at timestamptz default now()
-);
-
--- =========================================
--- PASAJEROS (clientes recurrentes, ej. colegiales con pago semanal)
+-- PASAJEROS FIJOS (alumnos, profesor: se cobra por tramo, pagan semanal)
 -- =========================================
 create table passengers (
   id uuid primary key default uuid_generate_v4(),
   driver_id uuid references profiles(id) on delete cascade not null,
   name text not null,
   phone text,
-  route_id uuid references routes(id) on delete set null,
-  weekly_rate numeric(10,2),    -- monto acordado por semana (si aplica)
+  fare_ida numeric(10,2) not null default 0,
+  fare_vuelta numeric(10,2) not null default 0,
+  -- Días en que normalmente aplica este pasajero (ISO: 1=lunes ... 7=domingo)
+  -- Ej: alumno = {1,2,3,4,5}, profesor que a veces va sábado = {1,2,3,4,5,6}
+  days_of_week smallint[] not null default '{1,2,3,4,5}',
   active boolean default true,
   notes text,
   created_at timestamptz default now()
 );
 
 -- =========================================
--- INGRESOS (cada carrera/viaje registrado)
+-- TRAMOS DIARIOS (check de ida/vuelta por pasajero, como lista de asistencia)
 -- =========================================
-create table income_records (
+create table trip_legs (
   id uuid primary key default uuid_generate_v4(),
   driver_id uuid references profiles(id) on delete cascade not null,
-  passenger_id uuid references passengers(id) on delete set null, -- null = pasajero ocasional
-  route_id uuid references routes(id) on delete set null,
+  passenger_id uuid references passengers(id) on delete cascade not null,
+  leg_date date not null default current_date,
+  leg text not null check (leg in ('ida','vuelta')),
   amount numeric(10,2) not null,
-  payment_method text default 'efectivo', -- efectivo, yape, plin, etc.
+  weekly_payment_id uuid,
+  created_at timestamptz default now(),
+  unique (passenger_id, leg_date, leg)
+);
+
+-- =========================================
+-- EXTRAS (carreras sueltas, cobradas al momento, monto variable)
+-- =========================================
+create table extras (
+  id uuid primary key default uuid_generate_v4(),
+  driver_id uuid references profiles(id) on delete cascade not null,
+  amount numeric(10,2) not null,
+  payment_method text default 'efectivo',
+  note text,
   occurred_at timestamptz not null default now(),
-  notes text,
   created_at timestamptz default now()
 );
 
 -- =========================================
--- PAGOS SEMANALES (liquidación de pasajeros con tarifa semanal)
+-- PAGOS SEMANALES (liquidación de tramos acumulados por pasajero fijo)
 -- =========================================
 create table weekly_payments (
   id uuid primary key default uuid_generate_v4(),
@@ -67,12 +73,17 @@ create table weekly_payments (
   passenger_id uuid references passengers(id) on delete cascade not null,
   week_start date not null,
   week_end date not null,
-  amount_due numeric(10,2) not null,
+  amount_due numeric(10,2) not null default 0,
   amount_paid numeric(10,2) default 0,
   status text default 'pendiente' check (status in ('pendiente','pagado','parcial')),
   paid_at timestamptz,
   created_at timestamptz default now()
 );
+
+-- trip_legs referencia weekly_payments, así que agregamos el FK después de crearla
+alter table trip_legs
+  add constraint trip_legs_weekly_payment_fk
+  foreign key (weekly_payment_id) references weekly_payments(id) on delete set null;
 
 -- =========================================
 -- GASTOS (combustible, mantenimiento, etc.)
@@ -80,7 +91,7 @@ create table weekly_payments (
 create table expenses (
   id uuid primary key default uuid_generate_v4(),
   driver_id uuid references profiles(id) on delete cascade not null,
-  category text not null, -- combustible, mantenimiento, seguro, multa, otro
+  category text not null,
   amount numeric(10,2) not null,
   description text,
   occurred_at timestamptz not null default now(),
@@ -90,39 +101,29 @@ create table expenses (
 -- =========================================
 -- ÍNDICES
 -- =========================================
-create index idx_income_driver_date on income_records(driver_id, occurred_at);
+create index idx_legs_driver_date on trip_legs(driver_id, leg_date);
+create index idx_legs_passenger on trip_legs(passenger_id, leg_date);
+create index idx_extras_driver_date on extras(driver_id, occurred_at);
 create index idx_expenses_driver_date on expenses(driver_id, occurred_at);
 create index idx_weekly_driver_status on weekly_payments(driver_id, status);
 create index idx_passengers_driver on passengers(driver_id);
-create index idx_routes_driver on routes(driver_id);
 
 -- =========================================
--- ROW LEVEL SECURITY (cada conductor solo ve sus datos)
+-- ROW LEVEL SECURITY
 -- =========================================
 alter table profiles enable row level security;
-alter table routes enable row level security;
 alter table passengers enable row level security;
-alter table income_records enable row level security;
+alter table trip_legs enable row level security;
+alter table extras enable row level security;
 alter table weekly_payments enable row level security;
 alter table expenses enable row level security;
 
-create policy "Users manage own profile" on profiles
-  for all using (auth.uid() = id);
-
-create policy "Users manage own routes" on routes
-  for all using (auth.uid() = driver_id);
-
-create policy "Users manage own passengers" on passengers
-  for all using (auth.uid() = driver_id);
-
-create policy "Users manage own income" on income_records
-  for all using (auth.uid() = driver_id);
-
-create policy "Users manage own weekly payments" on weekly_payments
-  for all using (auth.uid() = driver_id);
-
-create policy "Users manage own expenses" on expenses
-  for all using (auth.uid() = driver_id);
+create policy "Users manage own profile" on profiles for all using (auth.uid() = id);
+create policy "Users manage own passengers" on passengers for all using (auth.uid() = driver_id);
+create policy "Users manage own legs" on trip_legs for all using (auth.uid() = driver_id);
+create policy "Users manage own extras" on extras for all using (auth.uid() = driver_id);
+create policy "Users manage own weekly payments" on weekly_payments for all using (auth.uid() = driver_id);
+create policy "Users manage own expenses" on expenses for all using (auth.uid() = driver_id);
 
 -- =========================================
 -- TRIGGER: crear perfil automáticamente al registrarse

@@ -8,26 +8,17 @@ export default async function PasajerosPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ data: rows }, { data: routes }] = await Promise.all([
-    supabase
-      .from("passengers")
-      .select("id, name, phone, weekly_rate, active, routes(name)")
-      .eq("driver_id", user?.id)
-      .order("created_at", { ascending: false }),
-    supabase.from("routes").select("*").eq("driver_id", user?.id).order("name"),
-  ]);
+  const { data: rows } = await supabase
+    .from("passengers")
+    .select("id, name, phone, fare_ida, fare_vuelta, days_of_week, active")
+    .eq("driver_id", user?.id)
+    .order("created_at", { ascending: false });
 
   return (
     <>
-      <PageHeader title="Pasajeros" subtitle="Clientes frecuentes y tarifas semanales" />
+      <PageHeader title="Pasajeros" subtitle="Alumnos y profesor con tarifa fija por tramo" />
       <div className="p-8">
-        <PassengerClient
-          rows={(rows ?? []).map((r) => ({
-            ...r,
-            routes: Array.isArray(r.routes) ? r.routes[0] ?? null : r.routes,
-          }))}
-          routes={routes ?? []}
-        />
+        <PassengerClient rows={rows ?? []} />
       </div>
     </>
   );

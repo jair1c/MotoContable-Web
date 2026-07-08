@@ -6,39 +6,41 @@ export interface Profile {
   created_at: string;
 }
 
-export interface Route {
-  id: string;
-  driver_id: string;
-  name: string;
-  origin: string | null;
-  destination: string | null;
-  default_fare: number | null;
-  created_at: string;
-}
-
 export interface Passenger {
   id: string;
   driver_id: string;
   name: string;
   phone: string | null;
-  route_id: string | null;
-  weekly_rate: number | null;
+  fare_ida: number;
+  fare_vuelta: number;
+  days_of_week: number[];
   active: boolean;
   notes: string | null;
   created_at: string;
 }
 
-export type PaymentMethod = "efectivo" | "yape" | "plin" | "otro";
+export type Leg = "ida" | "vuelta";
 
-export interface IncomeRecord {
+export interface TripLeg {
   id: string;
   driver_id: string;
-  passenger_id: string | null;
-  route_id: string | null;
+  passenger_id: string;
+  leg_date: string;
+  leg: Leg;
+  amount: number;
+  weekly_payment_id: string | null;
+  created_at: string;
+}
+
+export type PaymentMethod = "efectivo" | "yape" | "plin" | "otro";
+
+export interface Extra {
+  id: string;
+  driver_id: string;
   amount: number;
   payment_method: PaymentMethod;
+  note: string | null;
   occurred_at: string;
-  notes: string | null;
   created_at: string;
 }
 

@@ -30,10 +30,10 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const isDashboardRoute = request.nextUrl.pathname.startsWith("/dashboard") ||
-    request.nextUrl.pathname.startsWith("/ingresos") ||
+    request.nextUrl.pathname.startsWith("/check-diario") ||
+    request.nextUrl.pathname.startsWith("/extras") ||
     request.nextUrl.pathname.startsWith("/gastos") ||
     request.nextUrl.pathname.startsWith("/pasajeros") ||
-    request.nextUrl.pathname.startsWith("/rutas") ||
     request.nextUrl.pathname.startsWith("/pagos-semanales");
 
   if (!user && isDashboardRoute) {

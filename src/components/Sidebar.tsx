@@ -5,10 +5,10 @@ import { usePathname } from "next/navigation";
 import {
   Gauge,
   LayoutDashboard,
-  Wallet,
+  CheckSquare,
+  Zap,
   Receipt,
   Users,
-  Route as RouteIcon,
   CalendarClock,
   LogOut,
 } from "lucide-react";
@@ -16,10 +16,10 @@ import { logout } from "@/app/(auth)/login/actions";
 
 const links = [
   { href: "/dashboard", label: "Panel", icon: LayoutDashboard },
-  { href: "/ingresos", label: "Ingresos", icon: Wallet },
+  { href: "/check-diario", label: "Check diario", icon: CheckSquare },
+  { href: "/extras", label: "Extras", icon: Zap },
   { href: "/gastos", label: "Gastos", icon: Receipt },
   { href: "/pasajeros", label: "Pasajeros", icon: Users },
-  { href: "/rutas", label: "Rutas", icon: RouteIcon },
   { href: "/pagos-semanales", label: "Pagos semanales", icon: CalendarClock },
 ];
 
