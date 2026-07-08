@@ -4,7 +4,7 @@ import { Gauge } from "lucide-react";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; mode?: string }>;
+  searchParams: Promise<{ error?: string; message?: string; mode?: string }>;
 }) {
   const params = await searchParams;
   const isSignup = params.mode === "registro";
@@ -30,6 +30,12 @@ export default async function LoginPage({
               ? "Registra tus carreras desde hoy mismo."
               : "Ingresa para ver tus carreras y liquidaciones."}
           </p>
+
+          {params.message && (
+            <div className="mb-4 rounded-lg bg-teal/10 border border-teal/30 px-3 py-2 text-sm text-teal">
+              {decodeURIComponent(params.message)}
+            </div>
+          )}
 
           {params.error && (
             <div className="mb-4 rounded-lg bg-signal/10 border border-signal/30 px-3 py-2 text-sm text-signal">

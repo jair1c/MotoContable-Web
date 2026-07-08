@@ -112,41 +112,30 @@ export function PassengerClient({ rows }: { rows: Row[] }) {
             {DAY_LABELS.map((d) => {
               const checked = newDays.includes(d.value);
               return (
-                <label key={d.value}>
-                  <input
-                    type="checkbox"
-                    name="days"
-                    value={d.value}
-                    checked={checked}
-                    onChange={() =>
-                      setNewDays((prev) =>
-                        checked
-                          ? prev.filter((v) => v !== d.value)
-                          : [...prev, d.value].sort()
-                      )
-                    }
-                    className="peer sr-only"
-                  />
-                  <span
-                    onClick={() =>
-                      setNewDays((prev) =>
-                        checked
-                          ? prev.filter((v) => v !== d.value)
-                          : [...prev, d.value].sort()
-                      )
-                    }
-                    className={`h-8 w-8 flex items-center justify-center rounded-lg text-xs font-medium cursor-pointer transition-colors ${
+                <button
+                  key={d.value}
+                  type="button"
+                  onClick={() =>
+                    setNewDays((prev) =>
                       checked
-                        ? "bg-amber-400 text-petrol-950"
-                        : "bg-petrol-800 text-white/40 hover:text-white"
-                    }`}
-                  >
-                    {d.label}
-                  </span>
-                </label>
+                        ? prev.filter((v) => v !== d.value)
+                        : [...prev, d.value].sort()
+                    )
+                  }
+                  className={`h-8 w-8 flex items-center justify-center rounded-lg text-xs font-medium transition-colors ${
+                    checked
+                      ? "bg-amber-400 text-petrol-950"
+                      : "bg-petrol-800 text-white/40 hover:text-white"
+                  }`}
+                >
+                  {d.label}
+                </button>
               );
             })}
           </div>
+          {newDays.map((d) => (
+            <input key={d} type="hidden" name="days" value={d} />
+          ))}
         </div>
       </form>
 

@@ -15,6 +15,14 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("id", user?.id)
+    .single();
+
+  const firstName = profile?.full_name?.split(" ")[0];
+
   const now = new Date();
   const todayDate = formatISO(startOfDay(now), { representation: "date" });
   const weekStartDate = formatISO(startOfWeek(now, { weekStartsOn: 1 }), {
@@ -79,7 +87,14 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <PageHeader title="Panel" subtitle="Resumen de tu actividad reciente" />
+      <PageHeader
+        title="Panel"
+        subtitle={
+          firstName
+            ? `Bienvenido, ${firstName} — resumen de tu actividad reciente`
+            : "Resumen de tu actividad reciente"
+        }
+      />
       <div className="p-8 space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard label="Hoy" value={soles(todayTotal)} icon={Wallet} accent="amber" />
