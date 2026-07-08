@@ -28,6 +28,7 @@ export function PassengerClient({ rows }: { rows: Row[] }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [isPending, startTransition] = useTransition();
   const [newDays, setNewDays] = useState<number[]>([1, 2, 3, 4, 5]);
+  const [error, setError] = useState<string | null>(null);
 
   return (
     <div className="space-y-6">
@@ -35,13 +36,23 @@ export function PassengerClient({ rows }: { rows: Row[] }) {
         ref={formRef}
         action={(fd) =>
           startTransition(async () => {
-            await addPassenger(fd);
-            formRef.current?.reset();
-            setNewDays([1, 2, 3, 4, 5]);
+            const result = await addPassenger(fd);
+            if (result?.error) {
+              setError(result.error);
+            } else {
+              setError(null);
+              formRef.current?.reset();
+              setNewDays([1, 2, 3, 4, 5]);
+            }
           })
         }
         className="bg-petrol-900 border border-petrol-700 rounded-2xl p-5 space-y-4"
       >
+        {error && (
+          <div className="rounded-lg bg-signal/10 border border-signal/30 px-3 py-2 text-sm text-signal">
+            {error}
+          </div>
+        )}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 items-end">
           <div>
             <label className="text-xs text-white/50 mb-1 block">Nombre</label>

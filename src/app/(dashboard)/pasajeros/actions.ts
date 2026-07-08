@@ -7,12 +7,16 @@ export async function addPassenger(formData: FormData) {
   const supabase = await createClient();
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
-  if (!user) return;
+
+  if (authError || !user) {
+    return { error: "No hay sesión activa. Vuelve a iniciar sesión." };
+  }
 
   const days = formData.getAll("days").map((d) => Number(d));
 
-  await supabase.from("passengers").insert({
+  const { error } = await supabase.from("passengers").insert({
     driver_id: user.id,
     name: formData.get("name") as string,
     phone: (formData.get("phone") as string) || null,
@@ -21,8 +25,13 @@ export async function addPassenger(formData: FormData) {
     days_of_week: days.length > 0 ? days : [1, 2, 3, 4, 5],
   });
 
+  if (error) {
+    return { error: error.message };
+  }
+
   revalidatePath("/pasajeros");
   revalidatePath("/check-diario");
+  return { error: null };
 }
 
 export async function toggleDay(id: string, currentDays: number[], day: number) {
