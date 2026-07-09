@@ -1,8 +1,8 @@
 "use client";
 
 import { useRef, useTransition } from "react";
-import { Trash2 } from "lucide-react";
-import { addExtra, deleteExtra } from "./actions";
+import { Trash2, CheckCircle2 } from "lucide-react";
+import { addExtra, deleteExtra, markExtraPaid } from "./actions";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -11,6 +11,7 @@ interface Row {
   amount: number;
   payment_method: string;
   note: string | null;
+  paid: boolean;
   occurred_at: string;
 }
 
@@ -26,19 +27,27 @@ export function ExtrasClient({ rows }: { rows: Row[] }) {
     )
     .reduce((acc, r) => acc + Number(r.amount), 0);
 
+  const pendingTotal = rows
+    .filter((r) => !r.paid)
+    .reduce((acc, r) => acc + Number(r.amount), 0);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <p className="text-sm text-white/50">
-          Carreras sueltas — se cobran al momento, no van a liquidación semanal.
+          Carreras sueltas — no van a liquidación semanal de pasajeros fijos.
         </p>
-        <div className="text-right">
-          <span className="text-xs text-white/40 uppercase tracking-wider block">
-            Extras hoy
-          </span>
-          <span className="font-mono tabular text-lg text-amber-400">
-            S/ {todayTotal.toFixed(2)}
-          </span>
+        <div className="flex gap-6 text-right">
+          <div>
+            <span className="text-xs text-white/40 uppercase tracking-wider block">Extras hoy</span>
+            <span className="font-mono tabular text-lg text-amber-400">S/ {todayTotal.toFixed(2)}</span>
+          </div>
+          {pendingTotal > 0 && (
+            <div>
+              <span className="text-xs text-white/40 uppercase tracking-wider block">Por cobrar</span>
+              <span className="font-mono tabular text-lg text-signal">S/ {pendingTotal.toFixed(2)}</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -50,7 +59,7 @@ export function ExtrasClient({ rows }: { rows: Row[] }) {
             formRef.current?.reset();
           })
         }
-        className="bg-petrol-900 border border-petrol-700 rounded-2xl p-5 grid grid-cols-2 md:grid-cols-4 gap-3 items-end"
+        className="bg-petrol-900 border border-petrol-700 rounded-2xl p-5 grid grid-cols-2 md:grid-cols-5 gap-3 items-end"
       >
         <div>
           <label className="text-xs text-white/50 mb-1 block">Monto (S/)</label>
@@ -85,6 +94,18 @@ export function ExtrasClient({ rows }: { rows: Row[] }) {
             placeholder="Opcional"
           />
         </div>
+        <div className="flex items-center gap-2 pb-2">
+          <input
+            id="paid"
+            name="paid"
+            type="checkbox"
+            defaultChecked
+            className="h-4 w-4 rounded accent-amber-400"
+          />
+          <label htmlFor="paid" className="text-xs text-white/60">
+            Cobrado al momento
+          </label>
+        </div>
         <button
           type="submit"
           disabled={isPending}
@@ -106,6 +127,7 @@ export function ExtrasClient({ rows }: { rows: Row[] }) {
                 <th className="py-3 px-5 font-medium">Fecha</th>
                 <th className="py-3 px-5 font-medium">Nota</th>
                 <th className="py-3 px-5 font-medium">Pago</th>
+                <th className="py-3 px-5 font-medium">Estado</th>
                 <th className="py-3 px-5 font-medium text-right">Monto</th>
                 <th className="py-3 px-5 font-medium"></th>
               </tr>
@@ -118,14 +140,33 @@ export function ExtrasClient({ rows }: { rows: Row[] }) {
                   </td>
                   <td className="py-3 px-5 text-white/60">{r.note ?? "—"}</td>
                   <td className="py-3 px-5 capitalize text-white/60">{r.payment_method}</td>
+                  <td className="py-3 px-5">
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full ${
+                        r.paid ? "bg-teal/10 text-teal" : "bg-signal/10 text-signal"
+                      }`}
+                    >
+                      {r.paid ? "Cobrado" : "Pendiente"}
+                    </span>
+                  </td>
                   <td className="py-3 px-5 text-right font-mono tabular text-amber-400">
                     S/ {Number(r.amount).toFixed(2)}
                   </td>
-                  <td className="py-3 px-5 text-right">
+                  <td className="py-3 px-5 text-right space-x-3">
+                    {!r.paid && (
+                      <button
+                        disabled={isPending}
+                        onClick={() => startTransition(() => markExtraPaid(r.id))}
+                        className="text-white/30 hover:text-teal transition-colors inline-block"
+                        title="Marcar cobrado"
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                      </button>
+                    )}
                     <button
                       disabled={isPending}
                       onClick={() => startTransition(() => deleteExtra(r.id))}
-                      className="text-white/30 hover:text-signal transition-colors"
+                      className="text-white/30 hover:text-signal transition-colors inline-block"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>

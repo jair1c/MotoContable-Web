@@ -40,6 +40,7 @@ export default async function DashboardPage() {
     weekExtras,
     monthExpenses,
     pendingPayments,
+    pendingExtras,
     last7Legs,
     last7Extras,
   ] = await Promise.all([
@@ -57,6 +58,7 @@ export default async function DashboardPage() {
       .select("amount_due, amount_paid")
       .eq("driver_id", user?.id)
       .in("status", ["pendiente", "parcial"]),
+    supabase.from("extras").select("amount").eq("driver_id", user?.id).eq("paid", false),
     supabase
       .from("trip_legs")
       .select("amount, leg_date")
@@ -75,10 +77,11 @@ export default async function DashboardPage() {
   const todayTotal = sum(todayLegs.data) + sum(todayExtras.data);
   const weekTotal = sum(weekLegs.data) + sum(weekExtras.data);
   const expensesTotal = sum(monthExpenses.data);
-  const pendingTotal = (pendingPayments.data ?? []).reduce(
-    (acc, p) => acc + (Number(p.amount_due) - Number(p.amount_paid)),
-    0
-  );
+  const pendingTotal =
+    (pendingPayments.data ?? []).reduce(
+      (acc, p) => acc + (Number(p.amount_due) - Number(p.amount_paid)),
+      0
+    ) + sum(pendingExtras.data);
 
   const chartRecords = [
     ...(last7Legs.data ?? []).map((l) => ({ amount: l.amount, occurred_at: l.leg_date })),

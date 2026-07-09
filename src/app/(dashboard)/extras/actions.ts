@@ -15,8 +15,16 @@ export async function addExtra(formData: FormData) {
     amount: Number(formData.get("amount")),
     payment_method: (formData.get("payment_method") as string) || "efectivo",
     note: (formData.get("note") as string) || null,
+    paid: formData.get("paid") === "on",
   });
 
+  revalidatePath("/extras");
+  revalidatePath("/dashboard");
+}
+
+export async function markExtraPaid(id: string) {
+  const supabase = await createClient();
+  await supabase.from("extras").update({ paid: true }).eq("id", id);
   revalidatePath("/extras");
   revalidatePath("/dashboard");
 }

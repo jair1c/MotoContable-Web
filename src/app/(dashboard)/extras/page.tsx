@@ -10,7 +10,7 @@ export default async function ExtrasPage() {
 
   const { data: rows } = await supabase
     .from("extras")
-    .select("id, amount, payment_method, note, occurred_at")
+    .select("id, amount, payment_method, note, paid, occurred_at")
     .eq("driver_id", user?.id)
     .order("occurred_at", { ascending: false })
     .limit(100);

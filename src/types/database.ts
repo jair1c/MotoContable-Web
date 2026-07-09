@@ -40,11 +40,12 @@ export interface Extra {
   amount: number;
   payment_method: PaymentMethod;
   note: string | null;
+  paid: boolean;
   occurred_at: string;
   created_at: string;
 }
 
-export type WeeklyPaymentStatus = "pendiente" | "pagado" | "parcial";
+export type WeeklyPaymentStatus = "pendiente" | "parcial" | "pagado" | "trasladado";
 
 export interface WeeklyPayment {
   id: string;
@@ -55,6 +56,7 @@ export interface WeeklyPayment {
   amount_due: number;
   amount_paid: number;
   status: WeeklyPaymentStatus;
+  note: string | null;
   paid_at: string | null;
   created_at: string;
 }

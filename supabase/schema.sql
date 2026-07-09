@@ -1,9 +1,17 @@
--- MotoContable Web - Schema v2
+-- MotoContable Web - Schema v3
 -- Ejecutar en el SQL Editor de Supabase
 -- (Si ya ejecutaste una versión anterior, borra las tablas antes: drop table if exists
 --  weekly_payments, trip_legs, extras, expenses, passengers, profiles cascade;
---  Si SOLO te falta la columna days_of_week en una tabla ya creada, corre en su lugar:
---  alter table passengers add column days_of_week smallint[] not null default '{1,2,3,4,5}';)
+--  drop trigger if exists on_auth_user_created on auth.users;
+--  drop function if exists public.handle_new_user();
+--
+--  SI YA TIENES DATOS Y NO QUIERES BORRAR NADA, corre solo esto en su lugar:
+--  alter table extras add column if not exists paid boolean not null default true;
+--  alter table weekly_payments add column if not exists note text;
+--  alter table weekly_payments drop constraint if exists weekly_payments_status_check;
+--  alter table weekly_payments add constraint weekly_payments_status_check
+--    check (status in ('pendiente','parcial','pagado','trasladado'));
+--  )
 
 create extension if not exists "uuid-ossp";
 
@@ -60,6 +68,7 @@ create table extras (
   amount numeric(10,2) not null,
   payment_method text default 'efectivo',
   note text,
+  paid boolean not null default true,
   occurred_at timestamptz not null default now(),
   created_at timestamptz default now()
 );
@@ -75,7 +84,10 @@ create table weekly_payments (
   week_end date not null,
   amount_due numeric(10,2) not null default 0,
   amount_paid numeric(10,2) default 0,
-  status text default 'pendiente' check (status in ('pendiente','pagado','parcial')),
+  -- pendiente: nada pagado | parcial: pagó una parte | pagado: liquidado completo
+  -- trasladado: el saldo que quedó debiendo se movió a la liquidación de la semana siguiente
+  status text default 'pendiente' check (status in ('pendiente','parcial','pagado','trasladado')),
+  note text,
   paid_at timestamptz,
   created_at timestamptz default now()
 );

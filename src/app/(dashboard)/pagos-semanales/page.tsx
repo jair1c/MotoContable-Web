@@ -10,7 +10,7 @@ export default async function PagosSemanalesPage() {
 
   const { data: rows } = await supabase
     .from("weekly_payments")
-    .select("id, week_start, week_end, amount_due, amount_paid, status, passengers(name)")
+    .select("id, week_start, week_end, amount_due, amount_paid, status, note, passengers(name)")
     .eq("driver_id", user?.id)
     .order("week_start", { ascending: false });
 

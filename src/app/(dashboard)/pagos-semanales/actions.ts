@@ -4,8 +4,9 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { startOfWeek, endOfWeek, formatISO } from "date-fns";
 
-// Suma los tramos (ida/vuelta) marcados esta semana por cada pasajero fijo
-// y genera (o actualiza) su liquidación semanal con el monto real.
+// Suma los tramos (ida/vuelta) marcados esta semana por cada pasajero fijo,
+// arrastra cualquier saldo pendiente de semanas anteriores, y genera/actualiza
+// su liquidación semanal con el monto real.
 export async function generateCurrentWeek() {
   const supabase = await createClient();
   const {
@@ -21,7 +22,34 @@ export async function generateCurrentWeek() {
     representation: "date",
   });
 
-  // Tramos de esta semana que todavía no están ligados a una liquidación
+  // 1. Arrastrar saldos pendientes/parciales de semanas anteriores
+  const carryover = new Map<string, number>();
+  const { data: overdue } = await supabase
+    .from("weekly_payments")
+    .select("id, passenger_id, amount_due, amount_paid")
+    .eq("driver_id", user.id)
+    .in("status", ["pendiente", "parcial"])
+    .lt("week_start", weekStart);
+
+  for (const payment of overdue ?? []) {
+    const remaining = Number(payment.amount_due) - Number(payment.amount_paid);
+    if (remaining > 0) {
+      carryover.set(
+        payment.passenger_id,
+        (carryover.get(payment.passenger_id) ?? 0) + remaining
+      );
+      await supabase
+        .from("weekly_payments")
+        .update({
+          status: "trasladado",
+          amount_paid: payment.amount_due, // se salda aquí, el saldo sigue vivo en la próxima
+          note: `Saldo de S/ ${remaining.toFixed(2)} trasladado a la semana del ${weekStart}`,
+        })
+        .eq("id", payment.id);
+    }
+  }
+
+  // 2. Tramos de esta semana que todavía no están ligados a una liquidación
   const { data: legs } = await supabase
     .from("trip_legs")
     .select("id, passenger_id, amount")
@@ -30,21 +58,30 @@ export async function generateCurrentWeek() {
     .gte("leg_date", weekStart)
     .lte("leg_date", weekEnd);
 
-  if (!legs || legs.length === 0) {
-    revalidatePath("/pagos-semanales");
-    return;
-  }
-
   const byPassenger = new Map<string, { legIds: string[]; total: number }>();
-  for (const leg of legs) {
+  for (const leg of legs ?? []) {
     const entry = byPassenger.get(leg.passenger_id) ?? { legIds: [], total: 0 };
     entry.legIds.push(leg.id);
     entry.total += Number(leg.amount);
     byPassenger.set(leg.passenger_id, entry);
   }
 
-  for (const [passengerId, { legIds, total }] of Array.from(byPassenger)) {
-    // ¿Ya existe una liquidación pendiente para este pasajero esta semana?
+  // Combinar pasajeros con tramos nuevos y/o saldo arrastrado
+  const passengerIds = new Set([
+    ...Array.from(byPassenger.keys()),
+    ...Array.from(carryover.keys()),
+  ]);
+  if (passengerIds.size === 0) {
+    revalidatePath("/pagos-semanales");
+    return;
+  }
+
+  for (const passengerId of Array.from(passengerIds)) {
+    const legInfo = byPassenger.get(passengerId);
+    const carryAmount = carryover.get(passengerId) ?? 0;
+    const total = (legInfo?.total ?? 0) + carryAmount;
+    const legIds = legInfo?.legIds ?? [];
+
     const { data: existingPayment } = await supabase
       .from("weekly_payments")
       .select("id, amount_due, status")
@@ -69,13 +106,17 @@ export async function generateCurrentWeek() {
           week_start: weekStart,
           week_end: weekEnd,
           amount_due: total,
+          note:
+            carryAmount > 0
+              ? `Incluye S/ ${carryAmount.toFixed(2)} de saldo pendiente anterior`
+              : null,
         })
         .select("id")
         .single();
       paymentId = created?.id;
     }
 
-    if (paymentId) {
+    if (paymentId && legIds.length > 0) {
       await supabase
         .from("trip_legs")
         .update({ weekly_payment_id: paymentId })
@@ -84,16 +125,22 @@ export async function generateCurrentWeek() {
   }
 
   revalidatePath("/pagos-semanales");
+  revalidatePath("/dashboard");
 }
 
-export async function markPaid(id: string, amountDue: number) {
+// Registra un pago (total o parcial) sobre una liquidación semanal
+export async function registerPayment(id: string, amountDue: number, amountPaid: number) {
   const supabase = await createClient();
+
+  const clamped = Math.max(0, Math.min(amountPaid, amountDue));
+  const status = clamped >= amountDue ? "pagado" : clamped > 0 ? "parcial" : "pendiente";
+
   await supabase
     .from("weekly_payments")
     .update({
-      status: "pagado",
-      amount_paid: amountDue,
-      paid_at: new Date().toISOString(),
+      status,
+      amount_paid: clamped,
+      paid_at: status === "pagado" ? new Date().toISOString() : null,
     })
     .eq("id", id);
 
