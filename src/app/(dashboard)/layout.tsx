@@ -1,4 +1,6 @@
 import { Sidebar } from "@/components/Sidebar";
+import { MobileTopBar } from "@/components/MobileTopBar";
+import { BottomNav } from "@/components/BottomNav";
 
 export default function DashboardLayout({
   children,
@@ -8,7 +10,11 @@ export default function DashboardLayout({
   return (
     <div className="flex">
       <Sidebar />
-      <div className="flex-1 min-h-screen">{children}</div>
+      <div className="flex-1 min-h-screen">
+        <MobileTopBar />
+        <div className="pb-20 md:pb-0">{children}</div>
+      </div>
+      <BottomNav />
     </div>
   );
 }

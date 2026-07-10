@@ -18,7 +18,7 @@ export default async function ExtrasPage() {
   return (
     <>
       <PageHeader title="Extras" subtitle="Carreras sueltas cobradas al momento" />
-      <div className="p-8">
+      <div className="p-5 md:p-8">
         <ExtrasClient rows={rows ?? []} />
       </div>
     </>

@@ -23,6 +23,23 @@ const plexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "MotoContable — Control de ingresos y gastos",
   description: "Lleva el control de tus carreras, pasajeros y gastos del día a día.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "MotoContable",
+  },
+  icons: {
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/icons/apple-touch-icon.png",
+  },
+};
+
+export const viewport = {
+  themeColor: "#0B1A21",
 };
 
 export default function RootLayout({

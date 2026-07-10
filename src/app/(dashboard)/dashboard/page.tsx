@@ -98,7 +98,7 @@ export default async function DashboardPage() {
             : "Resumen de tu actividad reciente"
         }
       />
-      <div className="p-8 space-y-6">
+      <div className="p-5 md:p-8 space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard label="Hoy" value={soles(todayTotal)} icon={Wallet} accent="amber" />
           <StatCard label="Esta semana" value={soles(weekTotal)} icon={TrendingUp} accent="teal" />

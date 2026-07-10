@@ -27,7 +27,7 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-60 shrink-0 bg-petrol-900 border-r border-petrol-700 flex flex-col min-h-screen">
+    <aside className="hidden md:flex w-60 shrink-0 bg-petrol-900 border-r border-petrol-700 flex-col min-h-screen">
       <div className="flex items-center gap-2 px-5 h-16 border-b border-petrol-700">
         <div className="h-8 w-8 rounded-full bg-amber-400 flex items-center justify-center">
           <Gauge className="h-4 w-4 text-petrol-950" strokeWidth={2.5} />

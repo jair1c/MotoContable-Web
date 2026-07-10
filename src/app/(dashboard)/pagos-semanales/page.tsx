@@ -20,7 +20,7 @@ export default async function PagosSemanalesPage() {
         title="Pagos semanales"
         subtitle="Liquidación de pasajeros con tarifa fija"
       />
-      <div className="p-8">
+      <div className="p-5 md:p-8">
         <WeeklyClient
           rows={(rows ?? []).map((r) => ({
             ...r,

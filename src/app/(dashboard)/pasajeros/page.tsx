@@ -17,7 +17,7 @@ export default async function PasajerosPage() {
   return (
     <>
       <PageHeader title="Pasajeros" subtitle="Alumnos y profesor con tarifa fija por tramo" />
-      <div className="p-8">
+      <div className="p-5 md:p-8">
         <PassengerClient rows={rows ?? []} />
       </div>
     </>

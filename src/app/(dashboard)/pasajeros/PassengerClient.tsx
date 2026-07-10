@@ -145,7 +145,8 @@ export function PassengerClient({ rows }: { rows: Row[] }) {
             Aún no registras pasajeros fijos. Agrega a tus alumnos y al profesor.
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-white/40 text-xs uppercase tracking-wider border-b border-petrol-700">
                 <th className="py-3 px-5 font-medium">Nombre</th>
@@ -214,6 +215,7 @@ export function PassengerClient({ rows }: { rows: Row[] }) {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

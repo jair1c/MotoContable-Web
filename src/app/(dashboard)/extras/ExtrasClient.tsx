@@ -121,7 +121,8 @@ export function ExtrasClient({ rows }: { rows: Row[] }) {
             Aún no registras carreras extra.
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-white/40 text-xs uppercase tracking-wider border-b border-petrol-700">
                 <th className="py-3 px-5 font-medium">Fecha</th>
@@ -175,6 +176,7 @@ export function ExtrasClient({ rows }: { rows: Row[] }) {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

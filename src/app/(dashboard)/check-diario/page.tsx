@@ -41,7 +41,7 @@ export default async function CheckDiarioPage({
         title="Check diario"
         subtitle="Marca ida y vuelta de cada pasajero fijo"
       />
-      <div className="p-8">
+      <div className="p-5 md:p-8">
         <CheckDiarioClient
           passengers={passengers}
           legsToday={legs ?? []}

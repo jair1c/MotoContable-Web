@@ -18,7 +18,7 @@ export default async function GastosPage() {
   return (
     <>
       <PageHeader title="Gastos" subtitle="Combustible, mantenimiento y más" />
-      <div className="p-8">
+      <div className="p-5 md:p-8">
         <ExpenseClient rows={rows ?? []} />
       </div>
     </>

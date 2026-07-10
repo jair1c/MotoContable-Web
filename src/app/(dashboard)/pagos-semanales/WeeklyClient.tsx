@@ -106,7 +106,8 @@ export function WeeklyClient({ rows }: { rows: Row[] }) {
             (requiere pasajeros activos con tramos marcados en Check diario).
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-white/40 text-xs uppercase tracking-wider border-b border-petrol-700">
                 <th className="py-3 px-5 font-medium">Pasajero</th>
@@ -154,6 +155,7 @@ export function WeeklyClient({ rows }: { rows: Row[] }) {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>
