@@ -37,7 +37,8 @@ function PaymentRow({ row, isPending, onSubmit }: {
   onSubmit: (amount: number) => void;
 }) {
   const remaining = Number(row.amount_due) - Number(row.amount_paid);
-  const [amount, setAmount] = useState(remaining.toFixed(2));
+  const defaultValue = row.status === "pagado" ? Number(row.amount_paid) : remaining;
+  const [amount, setAmount] = useState(defaultValue.toFixed(2));
 
   return (
     <div className="flex items-center gap-2 justify-end">
@@ -141,15 +142,13 @@ export function WeeklyClient({ rows }: { rows: Row[] }) {
                     )}
                   </td>
                   <td className="py-3 px-5">
-                    {(r.status === "pendiente" || r.status === "parcial") && (
-                      <PaymentRow
-                        row={r}
-                        isPending={isPending}
-                        onSubmit={(amount) =>
-                          startTransition(() => registerPayment(r.id, r.amount_due, amount))
-                        }
-                      />
-                    )}
+                    <PaymentRow
+                      row={r}
+                      isPending={isPending}
+                      onSubmit={(amount) =>
+                        startTransition(() => registerPayment(r.id, r.amount_due, amount))
+                      }
+                    />
                   </td>
                 </tr>
               ))}

@@ -84,7 +84,7 @@ export async function generateCurrentWeek() {
 
     const { data: existingPayment } = await supabase
       .from("weekly_payments")
-      .select("id, amount_due, status")
+      .select("id, amount_due, amount_paid, status, paid_at")
       .eq("driver_id", user.id)
       .eq("passenger_id", passengerId)
       .eq("week_start", weekStart)
@@ -93,9 +93,23 @@ export async function generateCurrentWeek() {
     let paymentId = existingPayment?.id;
 
     if (existingPayment) {
+      const newAmountDue = Number(existingPayment.amount_due) + total;
+      const currentPaid = Number(existingPayment.amount_paid ?? 0);
+      const newStatus =
+        currentPaid >= newAmountDue && newAmountDue > 0
+          ? "pagado"
+          : currentPaid > 0
+          ? "parcial"
+          : "pendiente";
+
       await supabase
         .from("weekly_payments")
-        .update({ amount_due: Number(existingPayment.amount_due) + total })
+        .update({
+          amount_due: newAmountDue,
+          status: newStatus,
+          // si dejó de estar totalmente pagado, ya no aplica la fecha de pago
+          paid_at: newStatus === "pagado" ? existingPayment.paid_at ?? new Date().toISOString() : null,
+        })
         .eq("id", existingPayment.id);
     } else {
       const { data: created } = await supabase
