@@ -33,11 +33,11 @@ export function ExtrasClient({ rows }: { rows: Row[] }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <p className="text-sm text-white/50">
           Carreras sueltas — no van a liquidación semanal de pasajeros fijos.
         </p>
-        <div className="flex gap-6 text-right">
+        <div className="flex gap-6">
           <div>
             <span className="text-xs text-white/40 uppercase tracking-wider block">Extras hoy</span>
             <span className="font-mono tabular text-lg text-amber-400">S/ {todayTotal.toFixed(2)}</span>
@@ -59,7 +59,7 @@ export function ExtrasClient({ rows }: { rows: Row[] }) {
             formRef.current?.reset();
           })
         }
-        className="bg-petrol-900 border border-petrol-700 rounded-2xl p-5 grid grid-cols-2 md:grid-cols-5 gap-3 items-end"
+        className="bg-petrol-900 border border-petrol-700 rounded-2xl p-5 grid grid-cols-2 md:grid-cols-4 gap-3 items-end"
       >
         <div>
           <label className="text-xs text-white/50 mb-1 block">Monto (S/)</label>
@@ -115,70 +115,119 @@ export function ExtrasClient({ rows }: { rows: Row[] }) {
         </button>
       </form>
 
-      <div className="bg-petrol-900 border border-petrol-700 rounded-2xl overflow-hidden">
-        {rows.length === 0 ? (
-          <div className="text-center py-16 text-white/40 text-sm">
-            Aún no registras carreras extra.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-white/40 text-xs uppercase tracking-wider border-b border-petrol-700">
-                <th className="py-3 px-5 font-medium">Fecha</th>
-                <th className="py-3 px-5 font-medium">Nota</th>
-                <th className="py-3 px-5 font-medium">Pago</th>
-                <th className="py-3 px-5 font-medium">Estado</th>
-                <th className="py-3 px-5 font-medium text-right">Monto</th>
-                <th className="py-3 px-5 font-medium"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id} className="border-b border-petrol-800 hover:bg-petrol-800/50">
-                  <td className="py-3 px-5 text-white/70">
-                    {format(new Date(r.occurred_at), "dd MMM, HH:mm", { locale: es })}
-                  </td>
-                  <td className="py-3 px-5 text-white/60">{r.note ?? "—"}</td>
-                  <td className="py-3 px-5 capitalize text-white/60">{r.payment_method}</td>
-                  <td className="py-3 px-5">
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full ${
-                        r.paid ? "bg-teal/10 text-teal" : "bg-signal/10 text-signal"
-                      }`}
-                    >
-                      {r.paid ? "Cobrado" : "Pendiente"}
-                    </span>
-                  </td>
-                  <td className="py-3 px-5 text-right font-mono tabular text-amber-400">
+      {rows.length === 0 ? (
+        <div className="bg-petrol-900 border border-petrol-700 rounded-2xl text-center py-16 text-white/40 text-sm">
+          Aún no registras carreras extra.
+        </div>
+      ) : (
+        <>
+          {/* Tarjetas — móvil */}
+          <div className="md:hidden space-y-2">
+            {rows.map((r) => (
+              <div
+                key={r.id}
+                className="bg-petrol-900 border border-petrol-700 rounded-xl p-4"
+              >
+                <div className="flex items-start justify-between mb-1.5">
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full ${
+                      r.paid ? "bg-teal/10 text-teal" : "bg-signal/10 text-signal"
+                    }`}
+                  >
+                    {r.paid ? "Cobrado" : "Pendiente"}
+                  </span>
+                  <span className="font-mono tabular text-sm text-amber-400">
                     S/ {Number(r.amount).toFixed(2)}
-                  </td>
-                  <td className="py-3 px-5 text-right space-x-3">
-                    {!r.paid && (
-                      <button
-                        disabled={isPending}
-                        onClick={() => startTransition(() => markExtraPaid(r.id))}
-                        className="text-white/30 hover:text-teal transition-colors inline-block"
-                        title="Marcar cobrado"
-                      >
-                        <CheckCircle2 className="h-4 w-4" />
-                      </button>
-                    )}
+                  </span>
+                </div>
+                <p className="text-xs text-white/40 mb-2">
+                  {format(new Date(r.occurred_at), "dd MMM, HH:mm", { locale: es })}
+                  {" · "}
+                  <span className="capitalize">{r.payment_method}</span>
+                  {r.note && <span> · {r.note}</span>}
+                </p>
+                <div className="flex items-center gap-3 justify-end">
+                  {!r.paid && (
                     <button
                       disabled={isPending}
-                      onClick={() => startTransition(() => deleteExtra(r.id))}
-                      className="text-white/30 hover:text-signal transition-colors inline-block"
+                      onClick={() => startTransition(() => markExtraPaid(r.id))}
+                      className="text-white/40 hover:text-teal transition-colors inline-flex items-center gap-1"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <CheckCircle2 className="h-4 w-4" />
+                      <span className="text-xs">Marcar cobrado</span>
                     </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  )}
+                  <button
+                    disabled={isPending}
+                    onClick={() => startTransition(() => deleteExtra(r.id))}
+                    className="text-white/30 hover:text-signal transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
-        )}
-      </div>
+
+          {/* Tabla — escritorio */}
+          <div className="hidden md:block bg-petrol-900 border border-petrol-700 rounded-2xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-white/40 text-xs uppercase tracking-wider border-b border-petrol-700">
+                  <th className="py-3 px-5 font-medium">Fecha</th>
+                  <th className="py-3 px-5 font-medium">Nota</th>
+                  <th className="py-3 px-5 font-medium">Pago</th>
+                  <th className="py-3 px-5 font-medium">Estado</th>
+                  <th className="py-3 px-5 font-medium text-right">Monto</th>
+                  <th className="py-3 px-5 font-medium"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.id} className="border-b border-petrol-800 hover:bg-petrol-800/50">
+                    <td className="py-3 px-5 text-white/70">
+                      {format(new Date(r.occurred_at), "dd MMM, HH:mm", { locale: es })}
+                    </td>
+                    <td className="py-3 px-5 text-white/60">{r.note ?? "—"}</td>
+                    <td className="py-3 px-5 capitalize text-white/60">{r.payment_method}</td>
+                    <td className="py-3 px-5">
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded-full ${
+                          r.paid ? "bg-teal/10 text-teal" : "bg-signal/10 text-signal"
+                        }`}
+                      >
+                        {r.paid ? "Cobrado" : "Pendiente"}
+                      </span>
+                    </td>
+                    <td className="py-3 px-5 text-right font-mono tabular text-amber-400">
+                      S/ {Number(r.amount).toFixed(2)}
+                    </td>
+                    <td className="py-3 px-5 text-right space-x-3">
+                      {!r.paid && (
+                        <button
+                          disabled={isPending}
+                          onClick={() => startTransition(() => markExtraPaid(r.id))}
+                          className="text-white/30 hover:text-teal transition-colors inline-block"
+                          title="Marcar cobrado"
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                        </button>
+                      )}
+                      <button
+                        disabled={isPending}
+                        onClick={() => startTransition(() => deleteExtra(r.id))}
+                        className="text-white/30 hover:text-signal transition-colors inline-block"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </div>
   );
 }

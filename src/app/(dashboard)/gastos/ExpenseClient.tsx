@@ -81,50 +81,81 @@ export function ExpenseClient({ rows }: { rows: Row[] }) {
         </button>
       </form>
 
-      <div className="bg-petrol-900 border border-petrol-700 rounded-2xl overflow-hidden">
-        {rows.length === 0 ? (
-          <div className="text-center py-16 text-white/40 text-sm">
-            No hay gastos registrados todavía.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-white/40 text-xs uppercase tracking-wider border-b border-petrol-700">
-                <th className="py-3 px-5 font-medium">Fecha</th>
-                <th className="py-3 px-5 font-medium">Categoría</th>
-                <th className="py-3 px-5 font-medium">Detalle</th>
-                <th className="py-3 px-5 font-medium text-right">Monto</th>
-                <th className="py-3 px-5 font-medium"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id} className="border-b border-petrol-800 hover:bg-petrol-800/50">
-                  <td className="py-3 px-5 text-white/70">
-                    {format(new Date(r.occurred_at), "dd MMM, HH:mm", { locale: es })}
-                  </td>
-                  <td className="py-3 px-5 capitalize">{r.category}</td>
-                  <td className="py-3 px-5 text-white/60">{r.description ?? "—"}</td>
-                  <td className="py-3 px-5 text-right font-mono tabular text-signal">
+      {rows.length === 0 ? (
+        <div className="bg-petrol-900 border border-petrol-700 rounded-2xl text-center py-16 text-white/40 text-sm">
+          No hay gastos registrados todavía.
+        </div>
+      ) : (
+        <>
+          {/* Tarjetas — móvil */}
+          <div className="md:hidden space-y-2">
+            {rows.map((r) => (
+              <div
+                key={r.id}
+                className="bg-petrol-900 border border-petrol-700 rounded-xl p-4"
+              >
+                <div className="flex items-start justify-between mb-1.5">
+                  <span className="text-sm font-medium capitalize">{r.category}</span>
+                  <span className="font-mono tabular text-sm text-signal">
                     S/ {Number(r.amount).toFixed(2)}
-                  </td>
-                  <td className="py-3 px-5 text-right">
-                    <button
-                      disabled={isPending}
-                      onClick={() => startTransition(() => deleteExpense(r.id))}
-                      className="text-white/30 hover:text-signal transition-colors"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-white/40">
+                    {format(new Date(r.occurred_at), "dd MMM, HH:mm", { locale: es })}
+                    {r.description && <span> · {r.description}</span>}
+                  </p>
+                  <button
+                    disabled={isPending}
+                    onClick={() => startTransition(() => deleteExpense(r.id))}
+                    className="text-white/30 hover:text-signal transition-colors shrink-0 ml-3"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
-        )}
-      </div>
+
+          {/* Tabla — escritorio */}
+          <div className="hidden md:block bg-petrol-900 border border-petrol-700 rounded-2xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-white/40 text-xs uppercase tracking-wider border-b border-petrol-700">
+                  <th className="py-3 px-5 font-medium">Fecha</th>
+                  <th className="py-3 px-5 font-medium">Categoría</th>
+                  <th className="py-3 px-5 font-medium">Detalle</th>
+                  <th className="py-3 px-5 font-medium text-right">Monto</th>
+                  <th className="py-3 px-5 font-medium"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.id} className="border-b border-petrol-800 hover:bg-petrol-800/50">
+                    <td className="py-3 px-5 text-white/70">
+                      {format(new Date(r.occurred_at), "dd MMM, HH:mm", { locale: es })}
+                    </td>
+                    <td className="py-3 px-5 capitalize">{r.category}</td>
+                    <td className="py-3 px-5 text-white/60">{r.description ?? "—"}</td>
+                    <td className="py-3 px-5 text-right font-mono tabular text-signal">
+                      S/ {Number(r.amount).toFixed(2)}
+                    </td>
+                    <td className="py-3 px-5 text-right">
+                      <button
+                        disabled={isPending}
+                        onClick={() => startTransition(() => deleteExpense(r.id))}
+                        className="text-white/30 hover:text-signal transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </div>
   );
 }

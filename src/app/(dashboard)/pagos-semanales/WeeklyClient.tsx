@@ -41,7 +41,7 @@ function PaymentRow({ row, isPending, onSubmit }: {
   const [amount, setAmount] = useState(defaultValue.toFixed(2));
 
   return (
-    <div className="flex items-center gap-2 justify-end">
+    <div className="flex items-center gap-2">
       <input
         type="number"
         step="0.01"
@@ -74,89 +74,134 @@ export function WeeklyClient({ rows }: { rows: Row[] }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <button
-          disabled={isPending}
-          onClick={() => startTransition(() => generateCurrentWeek())}
-          className="flex items-center gap-2 rounded-lg bg-amber-400 hover:bg-amber-500 transition-colors text-petrol-950 font-semibold py-2.5 px-4 text-sm disabled:opacity-60"
-        >
-          <RefreshCw className="h-4 w-4" />
-          Generar liquidaciones de esta semana
-        </button>
+      <button
+        disabled={isPending}
+        onClick={() => startTransition(() => generateCurrentWeek())}
+        className="flex items-center gap-2 rounded-lg bg-amber-400 hover:bg-amber-500 transition-colors text-petrol-950 font-semibold py-2.5 px-4 text-sm disabled:opacity-60"
+      >
+        <RefreshCw className="h-4 w-4" />
+        Generar liquidaciones de esta semana
+      </button>
 
-        <div className="flex gap-6 text-right">
-          <div>
-            <span className="text-xs text-white/40 uppercase tracking-wider block">Total esperado</span>
-            <span className="font-mono tabular text-lg">S/ {weekTotal.toFixed(2)}</span>
-          </div>
-          <div>
-            <span className="text-xs text-white/40 uppercase tracking-wider block">Cobrado</span>
-            <span className="font-mono tabular text-lg text-teal">S/ {weekPaid.toFixed(2)}</span>
-          </div>
-          <div>
-            <span className="text-xs text-white/40 uppercase tracking-wider block">Pendiente</span>
-            <span className="font-mono tabular text-lg text-signal">S/ {weekPending.toFixed(2)}</span>
-          </div>
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-petrol-900 border border-petrol-700 rounded-xl p-3">
+          <span className="text-[10px] text-white/40 uppercase tracking-wider block mb-0.5">Esperado</span>
+          <span className="font-mono tabular text-sm sm:text-base block truncate">S/ {weekTotal.toFixed(2)}</span>
+        </div>
+        <div className="bg-petrol-900 border border-petrol-700 rounded-xl p-3">
+          <span className="text-[10px] text-white/40 uppercase tracking-wider block mb-0.5">Cobrado</span>
+          <span className="font-mono tabular text-sm sm:text-base text-teal block truncate">S/ {weekPaid.toFixed(2)}</span>
+        </div>
+        <div className="bg-petrol-900 border border-petrol-700 rounded-xl p-3">
+          <span className="text-[10px] text-white/40 uppercase tracking-wider block mb-0.5">Pendiente</span>
+          <span className="font-mono tabular text-sm sm:text-base text-signal block truncate">S/ {weekPending.toFixed(2)}</span>
         </div>
       </div>
 
-      <div className="bg-petrol-900 border border-petrol-700 rounded-2xl overflow-hidden">
-        {rows.length === 0 ? (
-          <div className="text-center py-16 text-white/40 text-sm">
-            No hay liquidaciones todavía. Genera la semana actual arriba
-            (requiere pasajeros activos con tramos marcados en Check diario).
+      {rows.length === 0 ? (
+        <div className="bg-petrol-900 border border-petrol-700 rounded-2xl text-center py-16 text-white/40 text-sm">
+          No hay liquidaciones todavía. Genera la semana actual arriba
+          (requiere pasajeros activos con tramos marcados en Check diario).
+        </div>
+      ) : (
+        <>
+          {/* Tarjetas — móvil */}
+          <div className="md:hidden space-y-2">
+            {rows.map((r) => (
+              <div
+                key={r.id}
+                className="bg-petrol-900 border border-petrol-700 rounded-xl p-4 space-y-3"
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="font-medium">{r.passengers?.name ?? "—"}</p>
+                    <p className="text-xs text-white/40 mt-0.5">
+                      {format(new Date(r.week_start), "dd MMM", { locale: es })} –{" "}
+                      {format(new Date(r.week_end), "dd MMM", { locale: es })}
+                    </p>
+                  </div>
+                  <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${STATUS_STYLES[r.status]}`}>
+                    {STATUS_LABELS[r.status] ?? r.status}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-4 text-sm">
+                  <span className="text-white/60">
+                    Debe <span className="font-mono tabular text-white">S/ {Number(r.amount_due).toFixed(2)}</span>
+                  </span>
+                  <span className="text-white/60">
+                    Pagó <span className="font-mono tabular text-teal">S/ {Number(r.amount_paid).toFixed(2)}</span>
+                  </span>
+                </div>
+
+                {r.note && <p className="text-[11px] text-white/30">{r.note}</p>}
+
+                <div className="pt-2 border-t border-petrol-800">
+                  <PaymentRow
+                    row={r}
+                    isPending={isPending}
+                    onSubmit={(amount) =>
+                      startTransition(() => registerPayment(r.id, r.amount_due, amount))
+                    }
+                  />
+                </div>
+              </div>
+            ))}
           </div>
-        ) : (
-          <div className="overflow-x-auto">
+
+          {/* Tabla — escritorio */}
+          <div className="hidden md:block bg-petrol-900 border border-petrol-700 rounded-2xl overflow-hidden">
             <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-white/40 text-xs uppercase tracking-wider border-b border-petrol-700">
-                <th className="py-3 px-5 font-medium">Pasajero</th>
-                <th className="py-3 px-5 font-medium">Semana</th>
-                <th className="py-3 px-5 font-medium text-right">Debe</th>
-                <th className="py-3 px-5 font-medium text-right">Pagó</th>
-                <th className="py-3 px-5 font-medium">Estado</th>
-                <th className="py-3 px-5 font-medium text-right">Acción</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id} className="border-b border-petrol-800 hover:bg-petrol-800/50 align-top">
-                  <td className="py-3 px-5">{r.passengers?.name ?? "—"}</td>
-                  <td className="py-3 px-5 text-white/60">
-                    {format(new Date(r.week_start), "dd MMM", { locale: es })} –{" "}
-                    {format(new Date(r.week_end), "dd MMM", { locale: es })}
-                  </td>
-                  <td className="py-3 px-5 text-right font-mono tabular">
-                    S/ {Number(r.amount_due).toFixed(2)}
-                  </td>
-                  <td className="py-3 px-5 text-right font-mono tabular text-teal">
-                    S/ {Number(r.amount_paid).toFixed(2)}
-                  </td>
-                  <td className="py-3 px-5">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_STYLES[r.status]}`}>
-                      {STATUS_LABELS[r.status] ?? r.status}
-                    </span>
-                    {r.note && (
-                      <p className="text-[11px] text-white/30 mt-1 max-w-[180px]">{r.note}</p>
-                    )}
-                  </td>
-                  <td className="py-3 px-5">
-                    <PaymentRow
-                      row={r}
-                      isPending={isPending}
-                      onSubmit={(amount) =>
-                        startTransition(() => registerPayment(r.id, r.amount_due, amount))
-                      }
-                    />
-                  </td>
+              <thead>
+                <tr className="text-left text-white/40 text-xs uppercase tracking-wider border-b border-petrol-700">
+                  <th className="py-3 px-5 font-medium">Pasajero</th>
+                  <th className="py-3 px-5 font-medium">Semana</th>
+                  <th className="py-3 px-5 font-medium text-right">Debe</th>
+                  <th className="py-3 px-5 font-medium text-right">Pagó</th>
+                  <th className="py-3 px-5 font-medium">Estado</th>
+                  <th className="py-3 px-5 font-medium text-right">Acción</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.id} className="border-b border-petrol-800 hover:bg-petrol-800/50 align-top">
+                    <td className="py-3 px-5">{r.passengers?.name ?? "—"}</td>
+                    <td className="py-3 px-5 text-white/60">
+                      {format(new Date(r.week_start), "dd MMM", { locale: es })} –{" "}
+                      {format(new Date(r.week_end), "dd MMM", { locale: es })}
+                    </td>
+                    <td className="py-3 px-5 text-right font-mono tabular">
+                      S/ {Number(r.amount_due).toFixed(2)}
+                    </td>
+                    <td className="py-3 px-5 text-right font-mono tabular text-teal">
+                      S/ {Number(r.amount_paid).toFixed(2)}
+                    </td>
+                    <td className="py-3 px-5">
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_STYLES[r.status]}`}>
+                        {STATUS_LABELS[r.status] ?? r.status}
+                      </span>
+                      {r.note && (
+                        <p className="text-[11px] text-white/30 mt-1 max-w-[180px]">{r.note}</p>
+                      )}
+                    </td>
+                    <td className="py-3 px-5 text-right">
+                      <div className="flex justify-end">
+                        <PaymentRow
+                          row={r}
+                          isPending={isPending}
+                          onSubmit={(amount) =>
+                            startTransition(() => registerPayment(r.id, r.amount_due, amount))
+                          }
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        )}
-      </div>
+        </>
+      )}
     </div>
   );
 }

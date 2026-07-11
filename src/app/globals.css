@@ -7,6 +7,11 @@
   --foreground: #f5f2ec;
 }
 
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
 * {
   border-color: theme("colors.petrol.700");
 }
