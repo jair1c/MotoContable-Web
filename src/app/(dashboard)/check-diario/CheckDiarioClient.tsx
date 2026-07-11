@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Check, ArrowRight, ArrowLeft } from "lucide-react";
 import { toggleLeg } from "./actions";
 import { format } from "date-fns";
@@ -16,9 +16,26 @@ interface Props {
 export function CheckDiarioClient({ passengers, legsToday, date }: Props) {
   const [isPending, startTransition] = useTransition();
   const [selectedDate, setSelectedDate] = useState(date);
+  // Copia local que se actualiza al instante al tocar un botón, sin
+  // esperar la respuesta del servidor (actualización optimista).
+  const [localLegs, setLocalLegs] = useState(legsToday);
+
+  useEffect(() => {
+    setLocalLegs(legsToday);
+  }, [legsToday]);
 
   const isMarked = (passengerId: string, leg: Leg) =>
-    legsToday.some((l) => l.passenger_id === passengerId && l.leg === leg);
+    localLegs.some((l) => l.passenger_id === passengerId && l.leg === leg);
+
+  function handleToggle(passengerId: string, leg: Leg, amount: number) {
+    const wasMarked = isMarked(passengerId, leg);
+    setLocalLegs((prev) =>
+      wasMarked
+        ? prev.filter((l) => !(l.passenger_id === passengerId && l.leg === leg))
+        : [...prev, { passenger_id: passengerId, leg }]
+    );
+    startTransition(() => toggleLeg(passengerId, leg, amount, selectedDate));
+  }
 
   const total = passengers.reduce((acc, p) => {
     let sum = acc;
@@ -47,7 +64,7 @@ export function CheckDiarioClient({ passengers, legsToday, date }: Props) {
         </div>
         <div className="text-right">
           <span className="text-xs text-white/40 uppercase tracking-wider block mb-1">
-            Total del día
+            Total del día {isPending && <span className="text-amber-400/70">· sincronizando…</span>}
           </span>
           <span className="font-mono tabular text-2xl text-amber-400">
             S/ {total.toFixed(2)}
@@ -86,12 +103,7 @@ export function CheckDiarioClient({ passengers, legsToday, date }: Props) {
                 </div>
                 <div className="flex items-center gap-2">
                   <button
-                    disabled={isPending}
-                    onClick={() =>
-                      startTransition(() =>
-                        toggleLeg(p.id, "ida", p.fare_ida, selectedDate)
-                      )
-                    }
+                    onClick={() => handleToggle(p.id, "ida", p.fare_ida)}
                     className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
                       idaOn
                         ? "bg-teal text-white"
@@ -102,12 +114,7 @@ export function CheckDiarioClient({ passengers, legsToday, date }: Props) {
                     Ida
                   </button>
                   <button
-                    disabled={isPending}
-                    onClick={() =>
-                      startTransition(() =>
-                        toggleLeg(p.id, "vuelta", p.fare_vuelta, selectedDate)
-                      )
-                    }
+                    onClick={() => handleToggle(p.id, "vuelta", p.fare_vuelta)}
                     className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
                       vueltaOn
                         ? "bg-teal text-white"
