@@ -143,6 +143,43 @@ export async function generateCurrentWeek() {
 }
 
 // Registra un pago (total o parcial) sobre una liquidación semanal
+// Trae el detalle de una liquidación (pasajero + tramos del día que la componen)
+// para armar el reporte PDF en el cliente.
+export async function getPaymentDetail(paymentId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data: payment } = await supabase
+    .from("weekly_payments")
+    .select("id, week_start, week_end, amount_due, amount_paid, status, note, passengers(name)")
+    .eq("id", paymentId)
+    .eq("driver_id", user.id)
+    .single();
+
+  if (!payment) return null;
+
+  const { data: legs } = await supabase
+    .from("trip_legs")
+    .select("leg_date, leg, amount")
+    .eq("weekly_payment_id", paymentId)
+    .order("leg_date");
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("id", user.id)
+    .single();
+
+  return {
+    payment,
+    legs: legs ?? [],
+    driverName: profile?.full_name ?? null,
+  };
+}
+
 export async function registerPayment(id: string, amountDue: number, amountPaid: number) {
   const supabase = await createClient();
 

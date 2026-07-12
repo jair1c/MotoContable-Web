@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { CheckCircle2, RefreshCw } from "lucide-react";
-import { generateCurrentWeek, registerPayment } from "./actions";
+import { CheckCircle2, RefreshCw, FileDown } from "lucide-react";
+import { generateCurrentWeek, registerPayment, getPaymentDetail } from "./actions";
+import { downloadPaymentPdf } from "./pdf";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -60,6 +61,34 @@ function PaymentRow({ row, isPending, onSubmit }: {
         <span className="text-xs">Registrar</span>
       </button>
     </div>
+  );
+}
+
+function PdfButton({ paymentId }: { paymentId: string }) {
+  const [loading, setLoading] = useState(false);
+
+  async function handleDownload() {
+    setLoading(true);
+    try {
+      const detail = await getPaymentDetail(paymentId);
+      if (detail) {
+        await downloadPaymentPdf(detail);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <button
+      disabled={loading}
+      onClick={handleDownload}
+      className="text-white/40 hover:text-amber-400 transition-colors inline-flex items-center gap-1 disabled:opacity-50"
+      title="Descargar PDF"
+    >
+      <FileDown className="h-4 w-4" />
+      <span className="text-xs">{loading ? "Generando…" : "PDF"}</span>
+    </button>
   );
 }
 
@@ -136,7 +165,7 @@ export function WeeklyClient({ rows }: { rows: Row[] }) {
 
                 {r.note && <p className="text-[11px] text-white/30">{r.note}</p>}
 
-                <div className="pt-2 border-t border-petrol-800">
+                <div className="pt-2 border-t border-petrol-800 flex items-center justify-between gap-2">
                   <PaymentRow
                     row={r}
                     isPending={isPending}
@@ -144,6 +173,7 @@ export function WeeklyClient({ rows }: { rows: Row[] }) {
                       startTransition(() => registerPayment(r.id, r.amount_due, amount))
                     }
                   />
+                  <PdfButton paymentId={r.id} />
                 </div>
               </div>
             ))}
@@ -185,7 +215,7 @@ export function WeeklyClient({ rows }: { rows: Row[] }) {
                       )}
                     </td>
                     <td className="py-3 px-5 text-right">
-                      <div className="flex justify-end">
+                      <div className="flex flex-col items-end gap-2">
                         <PaymentRow
                           row={r}
                           isPending={isPending}
@@ -193,6 +223,7 @@ export function WeeklyClient({ rows }: { rows: Row[] }) {
                             startTransition(() => registerPayment(r.id, r.amount_due, amount))
                           }
                         />
+                        <PdfButton paymentId={r.id} />
                       </div>
                     </td>
                   </tr>
