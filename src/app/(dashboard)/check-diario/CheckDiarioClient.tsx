@@ -1,11 +1,17 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
-import { Check, ArrowRight, ArrowLeft } from "lucide-react";
-import { toggleLeg } from "./actions";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Check, ArrowRight, ArrowLeft, CloudOff, RefreshCw } from "lucide-react";
+import { setLeg } from "./actions";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import type { Passenger, Leg } from "@/types/database";
+import {
+  queueLegChange,
+  removeFromQueue,
+  getQueue,
+  getPendingCount,
+} from "@/lib/offlineQueue";
 
 interface Props {
   passengers: Passenger[];
@@ -14,27 +20,85 @@ interface Props {
 }
 
 export function CheckDiarioClient({ passengers, legsToday, date }: Props) {
-  const [isPending, startTransition] = useTransition();
   const [selectedDate, setSelectedDate] = useState(date);
-  // Copia local que se actualiza al instante al tocar un botón, sin
-  // esperar la respuesta del servidor (actualización optimista).
   const [localLegs, setLocalLegs] = useState(legsToday);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [syncing, setSyncing] = useState(false);
+  const syncingRef = useRef(false);
 
   useEffect(() => {
     setLocalLegs(legsToday);
   }, [legsToday]);
 
+  useEffect(() => {
+    setPendingCount(getPendingCount());
+  }, []);
+
   const isMarked = (passengerId: string, leg: Leg) =>
     localLegs.some((l) => l.passenger_id === passengerId && l.leg === leg);
 
-  function handleToggle(passengerId: string, leg: Leg, amount: number) {
+  // Intenta subir todo lo que quedó pendiente en el celular. Se llama al
+  // recuperar señal, al montar la pantalla, y cada cierto tiempo por si acaso.
+  const flushQueue = useCallback(async () => {
+    if (syncingRef.current) return;
+    const queue = getQueue();
+    if (queue.length === 0) return;
+
+    syncingRef.current = true;
+    setSyncing(true);
+
+    for (const item of queue) {
+      try {
+        await setLeg(item.passengerId, item.leg, item.marked, item.amount, item.date);
+        removeFromQueue(item.key);
+        setPendingCount(getPendingCount());
+      } catch {
+        // sigue sin señal — se reintenta en el próximo ciclo
+        break;
+      }
+    }
+
+    syncingRef.current = false;
+    setSyncing(false);
+  }, []);
+
+  useEffect(() => {
+    flushQueue();
+    window.addEventListener("online", flushQueue);
+    const interval = setInterval(flushQueue, 15000);
+    return () => {
+      window.removeEventListener("online", flushQueue);
+      clearInterval(interval);
+    };
+  }, [flushQueue]);
+
+  async function handleToggle(passengerId: string, leg: Leg, amount: number) {
     const wasMarked = isMarked(passengerId, leg);
+    const nextMarked = !wasMarked;
+
+    // Actualización optimista: se ve al instante en pantalla
     setLocalLegs((prev) =>
       wasMarked
         ? prev.filter((l) => !(l.passenger_id === passengerId && l.leg === leg))
         : [...prev, { passenger_id: passengerId, leg }]
     );
-    startTransition(() => toggleLeg(passengerId, leg, amount, selectedDate));
+
+    try {
+      await setLeg(passengerId, leg, nextMarked, amount, selectedDate);
+      // por si había quedado un cambio pendiente viejo para este mismo tramo
+      removeFromQueue(`${passengerId}|${leg}|${selectedDate}`);
+      setPendingCount(getPendingCount());
+    } catch {
+      // sin señal (u otro error de red): se guarda local y se reintenta solo
+      const count = queueLegChange({
+        passengerId,
+        leg,
+        date: selectedDate,
+        marked: nextMarked,
+        amount,
+      });
+      setPendingCount(count);
+    }
   }
 
   const total = passengers.reduce((acc, p) => {
@@ -48,6 +112,18 @@ export function CheckDiarioClient({ passengers, legsToday, date }: Props) {
 
   return (
     <div className="space-y-6">
+      {pendingCount > 0 && (
+        <div className="flex items-center gap-2 rounded-lg bg-amber-400/10 border border-amber-400/30 px-3 py-2 text-xs text-amber-400">
+          {syncing ? (
+            <RefreshCw className="h-3.5 w-3.5 animate-spin shrink-0" />
+          ) : (
+            <CloudOff className="h-3.5 w-3.5 shrink-0" />
+          )}
+          {pendingCount} {pendingCount === 1 ? "cambio" : "cambios"} guardados en el celular,
+          esperando señal para subir a la nube.
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <label className="text-xs text-white/50 mb-1 block">Fecha</label>
@@ -64,7 +140,7 @@ export function CheckDiarioClient({ passengers, legsToday, date }: Props) {
         </div>
         <div className="text-right">
           <span className="text-xs text-white/40 uppercase tracking-wider block mb-1">
-            Total del día {isPending && <span className="text-amber-400/70">· sincronizando…</span>}
+            Total del día
           </span>
           <span className="font-mono tabular text-2xl text-amber-400">
             S/ {total.toFixed(2)}
